@@ -11,6 +11,16 @@ API_KEY = os.getenv("API_KEY")
 
 api_url = "https://api.openweathermap.org/data/2.5/weather?lat={}&lon={}&appid={}".format(lat, lon, API_KEY)
 
+genre_dic = {
+        0:["Adventure", "Animation", "Children", "Comedy", "Musical"],
+        1:["Drama", "Romance", "Fantasy", "Mystery"],
+        2:["Romance", "Drama", "Crime", "Film-Noir"],
+        3:["Fantasy", "Romance", "Adventure", "IMAX"],
+        4:["Action", "Thriller", "Horror", "Sci-Fi"],
+        5:["Mystery", "Horror", "Film-Noir", "Western"]
+        }
+
+
 def get_weather_info(lat, lon):
     response = requests.get(api_url)
 
@@ -26,32 +36,29 @@ def get_weather_info(lat, lon):
 def translate_weather_code(weather_code):
     if weather_code == 800:
         # 맑은 날씨의 경우
-        print(0)
-        return
-    elif weather_code % 100 == 8:
+        return 0
+    elif weather_code // 100 == 8:
         # 구름 낀 날씨의 경우
-        print(1)
-        return
-    elif weather_code % 100 == 3 or weather_code % 100 == 4:
+        return 1
+    elif weather_code // 100 == 3 or weather_code // 100 == 4:
         # 비오는 날씨의 경우
-        print(2)
-        return
-    elif weather_code % 100 == 6:
+        return 2
+    elif weather_code // 100 == 6:
         # 눈오는 날씨의 경우
-        print(3)
-        return
-    elif weather_code % 100 == 2 or weather_code == 771 or weather_code == 781:
+        return 3
+    elif weather_code // 100 == 2 or weather_code == 771 or weather_code == 781:
         # 폭풍치는 날씨의 경우
-        print(4)
-        return
-    elif weather_code % 100 == 7:
+        return 4
+    elif weather_code // 100 == 7:
         # 안개 낀 날씨의 경우
-        print(5)
-        return
+        return 5
 
 def main():
     weather_code = get_weather_info(lat, lon)
-    translate_weather_code(weather_code)
+    print(weather_code)
+    translated_weather_code = translate_weather_code(weather_code)
+    print(translated_weather_code)
+    print(genre_dic.get(translated_weather_code))
 
 if __name__ == "__main__":
     main()
