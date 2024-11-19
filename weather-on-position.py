@@ -106,22 +106,26 @@ def movie_filterer(movie_id_list):
 
     return filtered_movies
 
-def movie_weather_recommender(recommend_num):
-    whole_movie_id_list = movie_df['movieId'].tolist()
+def movie_weather_recommender(recommend_num, min_rate_num):
     #print("whole movie id:", whole_movie_id_list)
-    filtered_movie_list = movie_filterer(whole_movie_id_list)
+    rating_counts = movie_ratings_df.groupby('movieId').size().reset_index(name='count')
+    valid_movie_list = rating_counts[rating_counts['count'] >= min_rate_num]['movieId'].tolist()
+    filtered_movie_df = movie_df[movie_df['movieId'].isin(valid_movie_list)]
+    result = movie_filterer(filtered_movie_df['movieId'].tolist())
     #print("filtered movie id:", filtered_movie_list)
-    sorted_result = sort_by_avg_rates(filtered_movie_list)
+    sorted_result = sort_by_avg_rates(result)
     
 
     return sorted_result[:recommend_num]
 
 def main():
+    recommend_num = 30
+    min_rate_num = 50
     #test_movie_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
     #result = movie_filterer(test_movie_list)
     
-    result = movie_weather_recommender(30)
+    result = movie_weather_recommender(recommend_num, min_rate_num)
 
 
     print(result)
