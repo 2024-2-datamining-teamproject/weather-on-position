@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 import os
 import requests
+import pandas as pd
 
 # position of Ajou University
 lat = 37.280
@@ -11,7 +12,7 @@ API_KEY = os.getenv("API_KEY")
 
 api_url = "https://api.openweathermap.org/data/2.5/weather?lat={}&lon={}&appid={}".format(lat, lon, API_KEY)
 
-genre_dic = {
+weather_genre_dic = {
         0:["Adventure", "Animation", "Children", "Comedy", "Musical"],
         1:["Drama", "Romance", "Fantasy", "Mystery"],
         2:["Romance", "Drama", "Crime", "Film-Noir"],
@@ -20,6 +21,8 @@ genre_dic = {
         5:["Mystery", "Horror", "Film-Noir", "Western"]
         }
 
+movie_df = pd.read_csv("movies.csv")
+movie_ratings_df = pd.read_csv("ratings.csv")
 
 def get_weather_info(lat, lon):
     response = requests.get(api_url)
@@ -53,12 +56,75 @@ def translate_weather_code(weather_code):
         # 안개 낀 날씨의 경우
         return 5
 
-def main():
+def filter_movies_by_weather(translated_weather_code, movie_genre_dic):
+    # filter movies from given list, using weather code
+    recommended_genre = weather_genre_dic.get(translated_weather_code)
+    #print("recommended list:", recommended_genre)
+    output = []
+    for movie_id, genre_list in movie_genre_dic.items():
+        #print("current list:", genre_list)
+        if bool(set(genre_list) & set(recommended_genre)):
+            #print("true for", movie_id)
+            output.append(movie_id)
+        #else:
+            #print("false for", movie_id)
+
+    return output
+
+
+def extract_movie_genre(movie_id_list):
+    given_movies_genre = {}
+    # extract movie's genre information, and refine it in list form
+    movie_data = movie_df[movie_df['movieId'].isin(movie_id_list)]
+    #print("data:", movie_data)
+    for index, row in movie_data.iterrows():
+        #print(row['genres'])
+        genre_list = row['genres'].split('|')  # '|'를 기준으로 장르 분리
+        #print("genres:", genre_list)
+        given_movies_genre[row['movieId']] = genre_list
+
+    #print(given_movies_genre)
+    return given_movies_genre
+
+def sort_by_avg_rates(movie_id_list):
+    # avg on every movie first,
+    filtered_movie_list = movie_ratings_df[movie_ratings_df['movieId'].isin(movie_id_list)]
+    #print(filtered_movie_list)
+    average_ratings = filtered_movie_list.groupby('movieId')['rating'].mean().reset_index()
+    average_ratings.rename(columns={'rating':'avg_rating'}, inplace=True)
+    # and sort it in descending order
+    average_ratings = average_ratings.sort_values(by='avg_rating', ascending=False)['movieId'].tolist()
+    #print(average_ratings)
+
+    return average_ratings
+
+def movie_filterer(movie_id_list):
+    # filter movie by checking weather of AJOU university
     weather_code = get_weather_info(lat, lon)
-    print(weather_code)
     translated_weather_code = translate_weather_code(weather_code)
-    print(translated_weather_code)
-    print(genre_dic.get(translated_weather_code))
+    filtered_movies = filter_movies_by_weather(translated_weather_code, extract_movie_genre(movie_id_list))
+
+    return filtered_movies
+
+def movie_weather_recommender(recommend_num):
+    whole_movie_id_list = movie_df['movieId'].tolist()
+    #print("whole movie id:", whole_movie_id_list)
+    filtered_movie_list = movie_filterer(whole_movie_id_list)
+    #print("filtered movie id:", filtered_movie_list)
+    sorted_result = sort_by_avg_rates(filtered_movie_list)
+    
+
+    return sorted_result[:recommend_num]
+
+def main():
+    #test_movie_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    #result = movie_filterer(test_movie_list)
+    
+    result = movie_weather_recommender(30)
+
+
+    print(result)
 
 if __name__ == "__main__":
     main()
